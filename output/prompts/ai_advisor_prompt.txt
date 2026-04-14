@@ -1,0 +1,42 @@
+You are the Chief of Operations at the Hualien County Disaster Prevention Command Center, writing a brief for the county magistrate. ARIA v5.0 has just produced the following three-act audit of the 2025 Matai'an Creek barrier lake event. Write a 250-word operational brief covering:
+
+1. Three-act timeline — what the imagery proves
+2. The pre-breach warning window (Jul 21 to Sep 23, 64 days) — what ARIA v5.0 could have caught if it had been operational
+3. Coverage gap — why did the W3/W7 Hualien City focus miss Guangfu?
+4. Next-24-hour orders: priority clearance, shelter resupply, UAV tasking
+5. One concrete suggestion to extend ARIA before the next barrier-lake event
+
+IMPACT TABLE:
+| asset            | type          | location          | W4_terrain_risk   | W7_centrality_rank   | lake_hit   | landslide_hit   | debris_hit   | notes                    |
+|:-----------------|:--------------|:------------------|:------------------|:---------------------|:-----------|:----------------|:-------------|:-------------------------|
+| bottleneck_1     | W7_Bottleneck | (339926, 2617877) | High              | 1                    | N          | Y               | N            | Centrality: 0.257        |
+| 光復自強外役監獄 | W3_Shelter    | (338022, 2610619) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 大富國小         | W3_Shelter    | (335829, 2611674) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 大興國小         | W3_Shelter    | (336605, 2614434) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 大興活動中心     | W3_Shelter    | (336199, 2614604) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 砂荖活動中心     | W3_Shelter    | (342024, 2615437) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 太巴塱國小       | W3_Shelter    | (341760, 2617456) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 大同活動中心     | W3_Shelter    | (339989, 2617829) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 光復鄉公所       | W3_Shelter    | (339211, 2618514) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| 光復國中         | W3_Shelter    | (339366, 2618634) | Medium            | -                    | N          | Y               | N            | Within 100m of landslide |
+| bottleneck_2     | W7_Bottleneck | (341640, 2617466) | Medium            | 2                    | N          | Y               | N            | Centrality: 0.246        |
+| bottleneck_3     | W7_Bottleneck | (341696, 2617427) | Medium            | 3                    | N          | Y               | N            | Centrality: 0.242        |
+| bottleneck_4     | W7_Bottleneck | (340606, 2617646) | Medium            | 4                    | N          | Y               | N            | Centrality: 0.231        |
+| bottleneck_5     | W7_Bottleneck | (340073, 2617827) | Medium            | 5                    | N          | Y               | N            | Centrality: 0.228        |
+| 光復車站         | W8_Guangfu    | (338022, 2610619) | Low               | -                    | nan        | Y               | N            | Near landslide (<100m)   |
+| 光復國小         | W8_Guangfu    | (338022, 2610619) | Low               | -                    | nan        | Y               | N            | Near landslide (<100m)   |
+| 馬太鞍台9線橋    | W8_Guangfu    | (335829, 2611674) | Low               | -                    | nan        | Y               | N            | Near landslide (<100m)   |
+| 富源土石流潛勢區 | W8_Guangfu    | (336605, 2614434) | Low               | -                    | nan        | Y               | N            | Near landslide (<100m)   |
+| 花東山琉璃禪寺   | W3_Shelter    | (338401, 2610748) | Medium            | -                    | N          | N               | N            | Safe from landslide      |
+| 馬佛活動中心     | W3_Shelter    | (339803, 2614830) | Medium            | -                    | N          | N               | N            | Safe from landslide      |
+| 光復鄉立托兒所   | W3_Shelter    | (338690, 2616603) | Medium            | -                    | N          | N               | N            | Safe from landslide      |
+| 西南活動中心     | W3_Shelter    | (341860, 2617266) | Medium            | -                    | N          | N               | N            | Safe from landslide      |
+| 東富國小         | W3_Shelter    | (345267, 2620120) | Medium            | -                    | N          | N               | N            | Safe from landslide      |
+| 光復鄉公所       | W8_Guangfu    | (338401, 2610748) | Low               | -                    | nan        | N               | N            | Safe zone                |
+
+THREE-ACT DETECTION SUMMARY:
+- Act 1 (Pre,  S2A_MSIL2A_20250615T023141_R046_T51QUG_20250615T070417):  forested Matai'an valley, no lake
+- Act 2 (Mid,  S2C_MSIL2A_20250911T022551_R046_T51QUG_20250911T055914):  barrier lake 1.046 km² detected  
+- Act 3 (Post, S2B_MSIL2A_20251016T022559_R046_T51QUG_20251016T042804): lake drained; landslide source 62.591 km²; debris flow footprint 2.338 km² over Guangfu
+
+Write in professional disaster-management tone. Focus on actionable intelligence. Use Traditional Chinese for place names.
