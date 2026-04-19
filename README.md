@@ -1,178 +1,48 @@
-# ARIA v5.0 Beta — 馬太鞍三幕審計器
+# ARIA v5.0: Matai'an Creek Impact Analysis & Diagnostic Log
 
-> **ARIA**: Accessible Resilience & Intelligence Auditor — 可及韌性智慧稽核框架
-> 
-> 核心案例：2025 年花蓮縣光復鄉馬太鞍溪堰塞湖潰堤事件
+## 1. Project Overview (專案概述)
+本專案為 ARIA v5.0 的事後評估 (Post-Event Assessment)，旨在利用 Sentinel-2 多光譜衛星影像，重建花蓮馬太鞍溪上游堰塞湖的形成與潰決過程，並評估其對下游光復鄉關鍵基礎設施的衝擊。
 
----
+## 2. Methodology & Thresholds (分析方法與閾值設定)
+本分析利用 `stackstac` 處理雲端最佳化 GeoTIFF (COG)，並套用以下核心光譜閾值進行災情辨識：
+* **堰塞湖 (Barrier Lake):** * `Pre-B08 > 0.25` (災前為植被)
+    * `Mid-B08 < 0.18` & `Mid-B02 > 0.03` & `Mid-B03 > Mid-B08` (災中為高濁度水體)
+* **崩塌源 (Landslide):** * `NIR Drop > 0.15` & `Post-SWIR > 0.25` & `Pre-B08 > 0.25` (植被消失轉為裸地)
+    * *Minimum Area:* 2,000 m²
+* **土石流 (Debris Flow):** * `NDVI Change > 0.25` & `BSI Change > 0.10` & `Pre-B08 > 0.20`
+    * *Minimum Area:* 5,000 m²
 
-## 一、專案簡介 (Introduction)
+## 3. Impact Assessment (衝擊檢核結果)
+利用 `geopandas` 進行空間交集檢核 (Spatial Join)，並設定合理的緩衝區 (Buffer)：
+* W3 避難所 (Shelters): 100m
+* W7 交通瓶頸 (Bottlenecks): 200m
+* 光復鄉節點 (Guangfu Overlay): 100m
+* **崩塌地危害半徑 (Landslide Zone):** 200m
 
-### 三幕式災害審計 (Three-Act Audit)
+**🎯 光復鄉關鍵節點衝擊結果摘要：**
+* **光復鄉公所 (Guangfu Township Office):** 被判定遭土石流 (`Debris Flow: Y`) 衝擊。
+* **佛祖街沉積區中心 (Foxu Debris Zone):** 被判定遭土石流 (`Debris Flow: Y`) 衝擊。
+* *備註：光復火車站與光復國小雖位於災區邊緣，但在本次嚴格的 100m 緩衝區與面積過濾條件下，被判定未直接遭受土石流覆蓋 (`Debris Flow: N`)。*
 
-本專案利用歐洲太空總署 **Sentinel-2 L2A** 多光譜衛星影像（10–20 公尺解析度），對馬太鞍溪堰塞湖事件進行「時間–空間–光譜」三維度稽核：
+## 4. AI Diagnostic Log (除錯與系統極限分析)
 
-| 幕次 (Act) | 時相 | 影像證據 | 物理意義 |
-|:----------:|:----:|:---------|:---------|
-| **Act 1 — Pre** | 2025-06-15 | 森林覆蓋、無水體 | 颱風侵襲前基線狀態 |
-| **Act 2 — Mid** | 2025-09-11 | 堰塞湖形成 (~1.05 km²) | 崩塌體阻塞河道、高濁度水體 |
-| **Act 3 — Post** | 2025-10-16 | 潰堤、土石流鋪面 (~2.34 km²) | 釋流後堆積物覆蓋光復鄉稻田 |
+在開發與執行過程中，遭遇了真實世界廣域遙測分析的典型挑戰，以下為關鍵診斷紀錄：
 
-> **技術核心**：透過 **STAC API** 串流 **Microsoft Planetary Computer** 影像，使用 `stackstac` 建立 Lazy-loading 資料立方體 (Cube)，以最小化本機 I/O 負荷。
+### A. 效能瓶頸與 Dask 死鎖 (The "Deadlock" Trap)
+* **現象：** 在未限制 Bounding Box (BBOX) 或未採用單執行緒模式下，執行 Phase 3 的 `vectorize_and_filter` 函數時，系統出現嚴重的卡頓 (耗時超過 10 分鐘) 甚至死鎖。
+* **診斷：** 這是因為處理縣市級的 10m 高解析度影像（多波段、多時期）時，資料量高達 1.5GB 以上。Python 的 `Dask` 延遲運算 (Lazy Evaluation) 在同時執行複雜幾何轉換與空間過濾時，引發了記憶體溢出或網路請求逾時 (SAS Token Expiration)。
+* **解決方案：** 引入 `dask.diagnostics.ProgressBar` 監控真實下載進度，並將空間過濾邏輯（例如轉換至 EPSG:3826）延後至面積篩選（去除大量微小雜訊）之後執行，成功讓程式在合理時間內 (約 10 分鐘) 穩定跑完廣域運算。
 
----
+### B. 坐標系轉換陷阱 (The CRS Mismatch)
+* **現象：** 初始測試時，設定 `mid_cube.x < 121.35` 試圖過濾東西部，卻導致遮罩完全失效。
+* **診斷：** 原始 Sentinel-2 影像位於 UTM 51N (EPSG:32651)，其 X 軸單位為公尺 (約在 280,000 左右)，而非經緯度。
+* **解決方案：** 統一在 UTM 投影下進行面積計算與初步過濾，最後再轉換至 TWD97 (EPSG:3826) 進行 `x < 285000` (約等同 121.34E) 的物理邊界切割。
 
-## 二、偵測物理邏輯 (Spectral Logic)
+### C. 紅海現象與偽陽性探討 (The "Red Sea" Phenomenon)
+*(請參考 `final_impact_map.png`)*
+* **現象：** 最終衝擊表中，所有光復鄉節點的 `Landslide Hit` 均呈現 `Y`。視覺化地圖顯示，整個光復鄉平原幾乎被崩塌地的 200m 緩衝區（紅色區塊）淹沒。
+* **診斷：** 這是純光譜檢核的極限。平原區秋季的農地收割或大面積裸露地，其光譜特徵 (NIR 下降、SWIR 升高) 與山坡地崩塌極為相似。當演算法未能嚴格將 `Landslide` 偵測限制在山區（例如漏掉平原區的空間 Mask），加上作業規定的 200m 巨大危害半徑，即產生了嚴重的偽陽性擴張。
+* **優化建議：** 下一代 ARIA 模型必須整合 DEM (Digital Elevation Model)，過濾掉坡度小於一定閾值（例如 10 度）的區域，以徹底消除平原區的崩塌地誤判。
 
-### 2.1 堰塞湖偵測 — 濁水體光譜特徵
-
-```python
-# S7: Barrier Lake Detection Logic
-lake_mask = (
-    (nir_pre > 0.25) &           # 事前為森林（高 NIR 反射）
-    (nir_mid < 0.15) &           # 事後 NIR 驟降（水體吸收 0.8–1.0 μm）
-    (blue_mid > 0.03) &          # 藍光散射（濁度指標）
-    (green_mid > nir_mid) &      # 綠光 > NIR（排除雲陰干擾）
-    upstream_gate                # 空間閘道：鎖定上游 121.33°E 以西
-)
-```
-
-> **物理機制**：清水在近紅外 (NIR, B08) 幾乎完全吸收，反射率趨近於零；濁水因懸浮泥沙產生微弱後向散射，NIR ≈ 0.10–0.18，形成可與植被區分的閾值窗口。
-
-### 2.2 山崩與土石流偵測 — 裸地與植被損失
-
-| 災害類型 | 主波段指標 | 邏輯判斷 | 空間閘道 |
-|---------|:----------:|:---------|:---------|
-| **上游崩塌源** (Landslide) | NIR Drop + SWIR Surge | `nir_drop > 0.10` & `swir_post > 0.20` | 上游集水區 |
-| **下游土石流** (Debris Flow) | NDVI↓ + BSI↑ | `ndvi_change > 0.25` & `bsi_change > 0.10` | 下游 121.35°E 以東 |
-
-```python
-# S8: Landslide Source (Bare Rock)
-landslide_mask = (nir_pre - nir_post > 0.10) & (swir_post > 0.20)
-
-# S9: Debris Flow (Wet Sediment over Paddy)
-debris_mask = (
-    (ndvi_pre - ndvi_post > 0.25) &      # 植被損失
-    (bsi_post - bsi_pre > 0.10) &        # 裸土增加
-    downstream_gate                       # 馬太鞍溪口下游
-)
-```
-
-> **物理機制**：
-> - **NIR Drop**：崩塌後裸露岩石/土壤之 NIR 反射率顯著低於森林冠層。
-> - **SWIR Surge**：短波紅外 (SWIR, B11) 對水分敏感，濕潤崩積土產生高反射。
-> - **BSI (Bare Soil Index)**：`(B11+B04)-(B08+B02)/(B11+B04)+(B08+B02)`，正值表裸土，負值表植被。
-
----
-
-## 三、環境設定 (Installation & Setup)
-
-### 3.1 相依套件
-
-```bash
-conda create -n gis-env python=3.11
-conda activate gis-env
-conda install -c conda-forge geopandas rasterio xarray rioxarray stackstac
-pip install pystac-client planetary-computer google-generativeai python-dotenv
-```
-
-### 3.2 環境變數設定 (.env)
-
-於專案根目錄建立 `.env` 檔案（**切勿提交至版本控制**）：
-
-```bash
-# API 金鑰
-GEMINI_API_KEY=your_gemini_api_key_here
-
-# 空間分析緩衝區（公尺）
-BUFFER_SHELTER=100        # 避難所與崩塌源判斷距離
-BUFFER_BOTTLENECK=200     # 瓶頸節點與崩塌源判斷距離
-BUFFER_DEBRIS=0         # 土石流區嚴格相交判斷
-
-# 三幕時間窗（ISO 8601）
-PRE_EVENT=2025-06-15      # S2A_20250615 — 颱風前基線
-MID_EVENT=2025-09-11      # S2C_20250911 — 堰塞湖峰值
-POST_EVENT=2025-10-16     # S2B_20251016 — 潰堤後災情
-```
-
-### 3.3 專案檔案結構
-
-```
-gis_aria/
-├── Week8-Student.ipynb          # 主分析筆記本（三幕稽核流程）
-├── src/
-│   └── guangfu_generator.py     # 光復鄉覆蓋層生成器
-├── data/
-│   ├── raw/                     # 原始輸入（避難所 CSV、河川 SHP）
-│   ├── processed/               # 清理後資料（雨量 GeoJSON、避難所點位）
-│   ├── scenarios/               # 情境分析資料（秀林鄉歷史案例）
-│   ├── guangfu_overlay.gpkg     # W8 光復鄉 5 節點覆蓋圖
-│   ├── guangfu_network.graphml  # 光復鄉 OSM 路網
-│   └── xiulin_network.graphml   # W7 秀林鄉路網（歷史比較）
-├── output/
-│   ├── figures/                 # 視覺化成果（07–12 號圖表）
-│   ├── vectors/                 # 向量成果（mataian_detections.gpkg）
-│   ├── tables/                  # 數據表（impact_table.csv）
-│   └── prompts/                 # AI 提示詞（ai_advisor_prompt.txt）
-└── cache/                       # STAC API 查詢快取
-```
-
----
-
-## 四、空間稽核 (Spatial Audit)
-
-### 4.1 多層次資產聯結 (Multi-Layer Asset Join)
-
-將遙測萃取之災害遮罩與地面資產進行空間交集，計算「衝擊命中」矩陣：
-
-```python
-# S12: Spatial Join Logic
-shelter_hit = gpd.sjoin(
-    shelters_gdf,                  # W3 避難所（14 點，光復鄉）
-    landslides_gdf.buffer(100),    # 崩塌源 100m 緩衝
-    predicate='intersects'
-)
-
-bottleneck_hit = gpd.sjoin(
-    top5_gdf,                      # W7 瓶頸（5 點，路網中介中心性 Top-5）
-    landslides_gdf.buffer(200),   # 崩塌源 200m 緩衝
-    predicate='intersects'
-)
-
-guangfu_hit = gpd.sjoin(
-    guangfu_gdf,                   # W8 光復節點（5 必需點：車站、國小、鄉公所、橋樑、土石流區）
-    debris_gdf,                    # 土石流遮罩（嚴格相交）
-    predicate='intersects'
-)
-```
-
-### 4.2 覆蓋缺口診斷 (Coverage Gap Analysis)
-
-| 資產層級 | 樣本數 | 崩塌/土石流命中 | 命中率 |
-|:--------:|:------:|:---------------:|:------:|
-| **W3 避難所** | 14 | 4/14 | 28.6% |
-| **W7 瓶頸點** | 5 | 5/5 | 100% |
-| **W8 光復節點** | 5 | 4/5 | 80% |
-
-> **政策意涵**：原 ARIA v4.0 僅覆蓋「花蓮市避難所 (W3)」與「秀林鄉路網瓶頸 (W7)」，未納入「光復鄉潛在災害走廊」。馬太鞍事件證明，災害發生於雷達覆蓋範圍之外，凸顯 W8 擴充之必要性。
-
-### 4.3 輸出成果
-
-| 檔案 | 說明 | 產出階段 |
-|:-----|:-----|:--------:|
-| `output/figures/12_coverage_gap_map.png` | 三幕災害疊加 W3/W7/W8 資產 | S12 |
-| `output/tables/impact_table.csv` | 資產衝擊矩陣（Y/N 命中表） | S12 |
-| `output/vectors/mataian_detections.gpkg` | 三圖層：堰塞湖、崩塌源、土石流 | S10 |
-| `output/prompts/ai_advisor_prompt.txt` | 光譜情報官提示詞（供 LLM 產生作戰簡報） | S13 |
-
----
-
-## 五、參考與致謝
-
-- **衛星資料**：Copernicus Sentinel-2 (ESA) via Microsoft Planetary Computer
-- **地形底圖**：OpenStreetMap (OSM)  via OSMnx
-- **座標系統**：EPSG:32651 (UTM Zone 51N) 用於遙測分析；EPSG:3826 (TWD97/TM2) 用於國內圖資整合
-
----
-
-*本專案為國立臺灣大學地理環境資源學系「地理資訊系統應用」課程成果，僅供學術研究使用。*
+## 5. Conclusion (戰略建議)
+本次 ARIA v5.0 分析證實，現有（v3, v7）集中於北花蓮的防災系統存在嚴重盲區。強烈建議重新分配資源，於馬太鞍溪流域等中南部高風險區增設預警節點。此外，光學衛星易受季風雲層干擾，建議未來導入 SAR (如 Sentinel-1) 提升全天候監測能力。
