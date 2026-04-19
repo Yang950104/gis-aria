@@ -46,3 +46,24 @@
 
 ## 5. Conclusion (戰略建議)
 本次 ARIA v5.0 分析證實，現有（v3, v7）集中於北花蓮的防災系統存在嚴重盲區。強烈建議重新分配資源，於馬太鞍溪流域等中南部高風險區增設預警節點。此外，光學衛星易受季風雲層干擾，建議未來導入 SAR (如 Sentinel-1) 提升全天候監測能力。
+
+## 6. 專案檔案結構
+
+```
+gis_aria/
+├── Week8-Student.ipynb          # 主分析筆記本（三幕稽核流程）
+├── src/
+│   └── guangfu_generator.py     # 光復鄉覆蓋層生成器
+├── data/
+│   ├── raw/                     # 原始輸入（避難所 CSV、河川 SHP）
+│   ├── processed/               # 清理後資料（雨量 GeoJSON、避難所點位）
+│   ├── scenarios/               # 情境分析資料（秀林鄉歷史案例）
+│   ├── guangfu_overlay.gpkg     # W8 光復鄉 5 節點覆蓋圖
+│   ├── guangfu_network.graphml  # 光復鄉 OSM 路網
+│   └── xiulin_network.graphml   # W7 秀林鄉路網（歷史比較）
+├── output/
+│   ├── figures/                 # 視覺化成果（07–12 號圖表）
+│   ├── vectors/                 # 向量成果（mataian_detections.gpkg）
+│   ├── tables/                  # 數據表（impact_table.csv）
+│   └── prompts/                 # AI 提示詞（ai_advisor_prompt.txt）
+└── cache/                       # STAC API 查詢快取
