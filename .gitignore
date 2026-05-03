@@ -1,1 +1,5 @@
 remo_w10
+.env
+output/ex_output
+Week10-Student.ipynb
+__pycache__
