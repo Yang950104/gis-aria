@@ -152,10 +152,11 @@ Thumbs.db
 *.tiff
 *.jp2
 data/
-output/
+# output/
 results/
 temp/
 tmp/
+training_data/
 
 # Large files
 *.zip
@@ -179,3 +180,5 @@ class_map_*.png
 *.joblib
 model_*.pkl
 model_*.joblib
+
+Week12-Student.ipynb
